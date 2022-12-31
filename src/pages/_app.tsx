@@ -22,6 +22,7 @@ const url =
 const App: AppType = ({ Component, pageProps }) => {
   const client = createClient({
     url,
+    fetchOptions: { headers: { 'apollo-require-preflight': 'true' } },
     suspense: isServerSide,
     exchanges: [cacheExchange, ssr, promiseExchange, multipartFetchExchange],
   });
