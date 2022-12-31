@@ -1,5 +1,5 @@
 {
-  "name": "next-urql",
+  "name": "next-apollo-server",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@apollo/server": "^4.3.0",
     "@types/formidable": "^2.0.5",
+    "@urql/exchange-multipart-fetch": "^1.0.1",
     "formidable": "^2.1.1",
     "graphql": "^16.6.0",
     "next": "^13.1.1",
