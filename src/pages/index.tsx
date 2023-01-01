@@ -27,8 +27,11 @@ const Page = () => {
         Source code
       </a>
       <hr />
+      {/* SSRされたデータはrefetchで更新可能 */}
       <button onClick={() => refetch({ requestPolicy: 'network-only' })}>日付更新</button>{' '}
+      {/* 日付がSSRされて出力される */}
       {data?.date && new Date(data.date).toLocaleString('ja-jp', { timeZone: 'Asia/Tokyo' })}
+      {/* ここから下はファイルアップロードサンプル */}
       <div
         style={{
           height: '100px',
@@ -50,6 +53,7 @@ const Page = () => {
       >
         Upload Area
       </div>
+      {/* アップロード動作確認のため、戻ってきたファイルデータの情報表示 */}
       {file && <pre>{JSON.stringify(file, undefined, '  ')}</pre>}
     </>
   );

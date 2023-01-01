@@ -1,10 +1,10 @@
-import { ReactNode } from 'react';
-import { Exchange, useClient } from 'urql';
 import { ssrExchange } from '@urql/core';
+import { ReactNode } from 'react';
+import { Client, Exchange, useClient } from 'urql';
 import { pipe, tap } from 'wonka';
 
+type Promises = Set<Promise<void>>;
 const DATA_NAME = '__NEXT_DATA_PROMISE__';
-
 const isServerSide = typeof window === 'undefined';
 
 /**
@@ -23,7 +23,7 @@ export const getSSRData = () => {
  */
 const DataRender = ({ ssr }: { ssr: ReturnType<typeof ssrExchange> }) => {
   const client = useClient();
-  const promises = (client as unknown as { promises?: Set<Promise<unknown>> }).promises;
+  const promises = (client as unknown as { promises?: Promises }).promises;
   const length = promises?.size;
   if (isServerSide && length) {
     throw Promise.allSettled(promises).then((v) => {
@@ -65,8 +65,8 @@ export const SSRProvider = ({
  */
 export const promiseExchange: Exchange = (input) => {
   const { client, forward } = input;
-  const promises = new Set<Promise<unknown>>();
-  (client as unknown as { promises: typeof promises }).promises = promises;
+  const promises: Promises = new Set();
+  (client as Client & { promises?: Promises }).promises = promises;
   return (ops) => {
     if (!isServerSide) {
       return forward(ops);
