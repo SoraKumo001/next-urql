@@ -1,13 +1,31 @@
 import { promises as fs } from 'fs';
 import { parse } from 'url';
-import { GraphQLRequest, HeaderMap } from '@apollo/server';
+import {
+  ApolloServer,
+  BaseContext,
+  ContextThunk,
+  GraphQLRequest,
+  HeaderMap,
+  HTTPGraphQLRequest,
+} from '@apollo/server';
 import formidable from 'formidable';
-import type { NextApiRequest } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 /**
- * NextApiRequestをApolloのHeaderに変換する
- * 馬鹿丁寧に変換していますが、同一ヘッダ名は後の値が上書き
- * @returns HeaderMap形式のヘッダ
+ * Request parameter conversion options
+ */
+
+export type FormidableOptions = formidable.Options;
+
+/**
+ * File type used by resolver
+ */
+export type FormidableFile = formidable.File;
+
+/**
+ * Converting NextApiRequest to Apollo's Header
+ * Identical header names are overwritten by later values
+ * @returns Header in HeaderMap format
  */
 export const createHeaders = (req: NextApiRequest) =>
   new HeaderMap(
@@ -21,20 +39,22 @@ export const createHeaders = (req: NextApiRequest) =>
   );
 
 /**
- * NextApiRequestからsearchを取り出す
+ *  Retrieve search from NextApiRequest
  * @returns search
  */
 export const createSearch = (req: NextApiRequest) => parse(req.url ?? '').search ?? '';
 
 /**
- * GraphQLのリクエストをmultipart/form-data 対応にする
- * @returns [executeHTTPGraphQLRequestに設定するbody,一時ファイル削除用ファンクション]
+ * Make GraphQL requests multipart/form-data compliant
+ * @returns [body to be set in executeHTTPGraphQLRequest, function for temporary file deletion]
  */
-export const createGraphQLRequest = (req: NextApiRequest) => {
-  const form = formidable();
+export const createBody = (req: NextApiRequest, options?: formidable.Options) => {
+  const form = formidable(options);
   return new Promise<[GraphQLRequest, () => void]>((resolve, reject) => {
-    form.parse(req, async (_, fields, files) => {
-      if (!req.headers['content-type']?.match(/^multipart\/form-data/)) {
+    form.parse(req, async (error, fields, files) => {
+      if (error) {
+        reject(error);
+      } else if (!req.headers['content-type']?.match(/^multipart\/form-data/)) {
         resolve([fields, () => {}]);
       } else {
         if (
@@ -69,4 +89,51 @@ export const createGraphQLRequest = (req: NextApiRequest) => {
       }
     });
   });
+};
+
+/**
+ * Creating methods
+ * @returns method string
+ */
+export const createMethod = (req: NextApiRequest) => req.method ?? '';
+
+/**
+ * Execute a GraphQL request
+ */
+export const executeHTTPGraphQLRequest = async <Context extends BaseContext>({
+  req,
+  res,
+  apolloServer,
+  options,
+  context,
+}: {
+  req: NextApiRequest;
+  res: NextApiResponse;
+  apolloServer: ApolloServer<Context>;
+  context: ContextThunk<Context>;
+  options?: FormidableOptions;
+}) => {
+  const [body, removeFiles] = await createBody(req, options);
+  try {
+    const httpGraphQLRequest: HTTPGraphQLRequest = {
+      method: createMethod(req),
+      headers: createHeaders(req),
+      search: createSearch(req),
+      body,
+    };
+    const result = await apolloServer.executeHTTPGraphQLRequest({
+      httpGraphQLRequest,
+      context,
+    });
+    if (result.body.kind === 'complete') {
+      res.end(result.body.string);
+    } else {
+      for await (const chunk of result.body.asyncIterator) {
+        res.write(chunk);
+      }
+      res.end();
+    }
+  } finally {
+    removeFiles();
+  }
 };

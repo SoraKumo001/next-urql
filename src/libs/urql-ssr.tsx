@@ -1,16 +1,18 @@
-import { ssrExchange } from '@urql/core';
+import { cacheExchange } from '@urql/exchange-graphcache';
 import { ReactNode } from 'react';
-import { Client, Exchange, useClient } from 'urql';
+import { composeExchanges, Exchange, ssrExchange, useClient } from 'urql';
 import { pipe, tap } from 'wonka';
+import type { SSRData } from '@urql/core/dist/types/exchanges/ssr';
 
 type Promises = Set<Promise<void>>;
+type ExchangeValue = { extractData: () => SSRData; promises: Promises };
 const DATA_NAME = '__NEXT_DATA_PROMISE__';
 const isServerSide = typeof window === 'undefined';
 
 /**
  * HTMLからデータの収集
  */
-export const getSSRData = () => {
+export const getInitialState = () => {
   if (typeof window !== 'undefined') {
     const node = document.getElementById(DATA_NAME);
     if (node) return JSON.parse(node.innerHTML);
@@ -21,9 +23,12 @@ export const getSSRData = () => {
 /**
  * Query終了まで待機して、収集したデータをレンダリング時に出力
  */
-const DataRender = ({ ssr }: { ssr: ReturnType<typeof ssrExchange> }) => {
+const DataRender = () => {
   const client = useClient();
-  const promises = (client as unknown as { promises?: Promises }).promises;
+  const { data } = client.readQuery(`query{exchangeValue}`, {})!;
+  const ssrExchange: ExchangeValue = data.exchangeValue;
+
+  const promises = ssrExchange.promises;
   const length = promises?.size;
   if (isServerSide && length) {
     throw Promise.allSettled(promises).then((v) => {
@@ -37,7 +42,7 @@ const DataRender = ({ ssr }: { ssr: ReturnType<typeof ssrExchange> }) => {
     <script
       id={DATA_NAME}
       type="application/json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(ssr.extractData()) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(ssrExchange.extractData()) }}
     />
   );
 };
@@ -45,17 +50,11 @@ const DataRender = ({ ssr }: { ssr: ReturnType<typeof ssrExchange> }) => {
 /**
  * SSRデータ挿入用
  */
-export const SSRProvider = ({
-  ssr,
-  children,
-}: {
-  ssr: ReturnType<typeof ssrExchange>;
-  children: ReactNode;
-}) => {
+export const NextSSRProvider = ({ children }: { children: ReactNode }) => {
   return (
     <>
       {children}
-      <DataRender ssr={ssr} />
+      <DataRender />
     </>
   );
 };
@@ -63,33 +62,52 @@ export const SSRProvider = ({
 /**
  * Query待機用拡張機能
  */
-export const promiseExchange: Exchange = (input) => {
-  const { client, forward } = input;
+export const createNextSSRExchange = () => {
   const promises: Promises = new Set();
-  (client as Client & { promises?: Promises }).promises = promises;
-  return (ops) => {
-    if (!isServerSide) {
-      return forward(ops);
-    }
-    let resolve: () => void;
-    return pipe(
-      ops,
-      tap((op) => {
-        if (op.kind === 'query') {
-          const promise = new Promise<void>((r) => {
-            resolve = r;
-          });
-          promises.add(promise);
-        }
-        return op;
-      }),
-      forward,
-      tap((result) => {
-        if (result.operation.kind === 'query') {
-          resolve();
-        }
-        return result;
-      })
-    );
+  const nextExchange: Exchange = (input) => {
+    const { forward } = input;
+    return (ops) => {
+      if (!isServerSide) {
+        return forward(ops);
+      }
+      let resolve: () => void;
+      return pipe(
+        ops,
+        tap((op) => {
+          if (op.kind === 'query') {
+            const promise = new Promise<void>((r) => {
+              resolve = r;
+            });
+            promises.add(promise);
+          }
+          return op;
+        }),
+        forward,
+        tap((result) => {
+          if (result.operation.kind === 'query') {
+            resolve();
+          }
+          return result;
+        })
+      );
+    };
   };
+
+  const _ssrExchange = ssrExchange({
+    isClient: !isServerSide,
+    // SSRに必要な初期データの設定
+    initialState: getInitialState(),
+  });
+  const exchangeValue = { extractData: () => _ssrExchange.extractData(), promises };
+  return composeExchanges([
+    cacheExchange({
+      resolvers: {
+        Query: {
+          exchangeValue: () => exchangeValue,
+        },
+      },
+    }),
+    _ssrExchange,
+    nextExchange,
+  ]);
 };

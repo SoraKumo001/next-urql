@@ -1,21 +1,21 @@
 import { promises as fs } from 'fs';
 import { ApolloServer } from '@apollo/server';
-import { File } from 'formidable';
+import { IResolvers } from '@graphql-tools/utils';
 import { gql } from 'urql';
-import { createGraphQLRequest, createHeaders, createSearch } from '../../libs/apollo-tools';
+import { executeHTTPGraphQLRequest, FormidableFile } from '../../libs/apollo-tools';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 /**
  * GraphQLのType設定
  */
 const typeDefs = gql`
-  # 日付を返す
+  # Return date
   scalar Date
   type Query {
     date: Date!
   }
 
-  # ファイル情報を返す
+  # Return file information
   type File {
     name: String!
     type: String!
@@ -28,14 +28,19 @@ const typeDefs = gql`
 `;
 
 /**
+ * Set Context type.
+ */
+type Context = { req: NextApiRequest; res: NextApiResponse };
+
+/**
  * GraphQLのResolver
  */
-const resolvers = {
+const resolvers: IResolvers<Context> = {
   Query: {
-    date: async () => new Date(),
+    date: async (_context, _args) => new Date(),
   },
   Mutation: {
-    upload: async (_: unknown, { file }: { file: File }) => {
+    upload: async (_context, { file }: { file: FormidableFile }) => {
       return {
         name: file.originalFilename,
         type: file.mimetype,
@@ -48,43 +53,30 @@ const resolvers = {
 /**
  * apolloServer
  */
-const apolloServer = new ApolloServer({
+const apolloServer = new ApolloServer<Context>({
   typeDefs,
-  resolvers,
+  resolvers: resolvers,
 });
 apolloServer.start();
 
 /**
- * Next.js用APIRouteハンドラ
+ * APIRoute handler for Next.js
  */
-const apolloHandler = async (req: NextApiRequest, res: NextApiResponse) => {
-  //NextApiRequestをGraphQL用のbody形式に変換(multipart/form-data対応)
-  const [body, removeFiles] = await createGraphQLRequest(req);
-  try {
-    const result = await apolloServer.executeHTTPGraphQLRequest({
-      httpGraphQLRequest: {
-        method: req.method ?? '',
-        headers: createHeaders(req),
-        search: createSearch(req),
-        body,
-      },
-      context: async () => ({ req, res }),
-    });
-    if (result.body.kind === 'complete') {
-      res.end(result.body.string);
-    } else {
-      for await (const chunk of result.body.asyncIterator) {
-        res.write(chunk);
-      }
-      res.end();
-    }
-  } finally {
-    // multipart/form-dataで作成された一時ファイルの削除
-    removeFiles();
-  }
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+  //Convert NextApiRequest to body format for GraphQL (multipart/form-data support).
+  executeHTTPGraphQLRequest({
+    req,
+    res,
+    apolloServer,
+    context: async () => ({ req, res }),
+    options: {
+      //Maximum upload file size set at 10 MB
+      maxFileSize: 10 * 1024 * 1024,
+    },
+  });
 };
 
-export default apolloHandler;
+export default handler;
 
 export const config = {
   api: {

@@ -1,7 +1,6 @@
-import { ssrExchange, cacheExchange } from '@urql/core';
 import { multipartFetchExchange } from '@urql/exchange-multipart-fetch';
-import { createClient, Provider } from 'urql';
-import { getSSRData, promiseExchange, SSRProvider } from '../libs/urql-ssr';
+import { Client, Provider } from 'urql';
+import { createNextSSRExchange, NextSSRProvider } from '../libs/urql-ssr';
 import type { AppType } from 'next/app';
 
 const endpoint = '/api/graphql';
@@ -14,32 +13,25 @@ const url =
 
 const isServerSide = typeof window === 'undefined';
 
-const ssr = ssrExchange({
-  isClient: !isServerSide,
-  // SSRに必要な初期データの設定
-  initialState: getSSRData(),
-});
-
 const App: AppType = ({ Component, pageProps }) => {
-  const client = createClient({
+  const nextSSRExchange = createNextSSRExchange();
+  const client = new Client({
     url,
     fetchOptions: { headers: { 'apollo-require-preflight': 'true' } },
     // Server側のみ'throw promise'を行う
     suspense: isServerSide,
     exchanges: [
-      cacheExchange,
-      ssr,
       // promiseExchangeでSSRに必要な待機作業を行う
-      promiseExchange,
+      nextSSRExchange,
       multipartFetchExchange,
     ],
   });
   return (
     <Provider value={client}>
       {/* SSR用データ収集機能の追加 */}
-      <SSRProvider ssr={ssr}>
+      <NextSSRProvider>
         <Component {...pageProps} />
-      </SSRProvider>
+      </NextSSRProvider>
     </Provider>
   );
 };

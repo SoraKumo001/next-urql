@@ -1,4 +1,4 @@
-import { gql, useMutation, useQuery } from 'urql';
+import { gql, useClient, useMutation, useQuery } from 'urql';
 
 // 日付を取り出す
 const QUERY = gql`
@@ -21,6 +21,7 @@ const UPLOAD = gql`
 const Page = () => {
   const [{ data }, refetch] = useQuery({ query: QUERY });
   const [{ data: file }, upload] = useMutation(UPLOAD);
+
   return (
     <>
       <a target="_blank" href="https://github.com/SoraKumo001/next-apollo-server" rel="noreferrer">
