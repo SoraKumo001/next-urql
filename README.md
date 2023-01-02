@@ -1,6 +1,6 @@
 # next-urql
 
-Next.js で`urql`を使ってファイル SSR をするサンプル
+Sample of file SSR using `urql` in Next.js.
 
-- デモ
+- demo
   <https://next-urql.vercel.app/>

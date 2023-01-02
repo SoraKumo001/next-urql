@@ -55,7 +55,6 @@ const resolvers: IResolvers<Context> = {
 const apolloServer = new ApolloServer<Context>({
   typeDefs,
   resolvers,
-  plugins: [],
 });
 apolloServer.start();
 
