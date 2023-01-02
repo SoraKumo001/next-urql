@@ -14,7 +14,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 /**
  * Request parameter conversion options
  */
-
 export type FormidableOptions = formidable.Options;
 
 /**
@@ -125,6 +124,10 @@ export const executeHTTPGraphQLRequest = async <Context extends BaseContext>({
       httpGraphQLRequest,
       context,
     });
+    result.status && res.status(result.status);
+    result.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
     if (result.body.kind === 'complete') {
       res.end(result.body.string);
     } else {
@@ -133,6 +136,7 @@ export const executeHTTPGraphQLRequest = async <Context extends BaseContext>({
       }
       res.end();
     }
+    return result;
   } finally {
     removeFiles();
   }

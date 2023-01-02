@@ -55,7 +55,8 @@ const resolvers: IResolvers<Context> = {
  */
 const apolloServer = new ApolloServer<Context>({
   typeDefs,
-  resolvers: resolvers,
+  resolvers,
+  plugins: [],
 });
 apolloServer.start();
 
@@ -64,7 +65,7 @@ apolloServer.start();
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   //Convert NextApiRequest to body format for GraphQL (multipart/form-data support).
-  executeHTTPGraphQLRequest({
+  return executeHTTPGraphQLRequest({
     req,
     res,
     apolloServer,
