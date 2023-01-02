@@ -10,7 +10,7 @@ const DATA_NAME = '__NEXT_DATA_PROMISE__';
 const isServerSide = typeof window === 'undefined';
 
 /**
- * HTMLからデータの収集
+ * Collecting data from HTML.
  */
 export const getInitialState = () => {
   if (typeof window !== 'undefined') {
@@ -21,7 +21,7 @@ export const getInitialState = () => {
 };
 
 /**
- * Query終了まで待機して、収集したデータをレンダリング時に出力
+ * Wait until end of Query and output collected data at render time.
  */
 const DataRender = () => {
   const client = useClient();
@@ -48,7 +48,7 @@ const DataRender = () => {
 };
 
 /**
- * SSRデータ挿入用
+ * For SSR data insertion
  */
 export const NextSSRProvider = ({ children }: { children: ReactNode }) => {
   return (
@@ -60,7 +60,7 @@ export const NextSSRProvider = ({ children }: { children: ReactNode }) => {
 };
 
 /**
- * Query待機用拡張機能
+ * Query standby extensions
  */
 export const createNextSSRExchange = () => {
   const promises: Promises = new Set();

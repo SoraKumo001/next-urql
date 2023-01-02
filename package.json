@@ -11,10 +11,9 @@
   },
   "dependencies": {
     "@apollo/server": "^4.3.0",
-    "@types/formidable": "^2.0.5",
+    "@react-libraries/next-apollo-server": "^0.0.1",
     "@urql/exchange-graphcache": "^5.0.8",
     "@urql/exchange-multipart-fetch": "^1.0.1",
-    "formidable": "^2.1.1",
     "graphql": "^16.6.0",
     "next": "^13.1.1",
     "react": "^18.2.0",

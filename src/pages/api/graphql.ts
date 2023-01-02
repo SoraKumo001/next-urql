@@ -1,14 +1,13 @@
 import { promises as fs } from 'fs';
 import { ApolloServer } from '@apollo/server';
-import { IResolvers } from '@graphql-tools/utils';
-import { gql } from 'urql';
-import { executeHTTPGraphQLRequest, FormidableFile } from '../../libs/apollo-tools';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { executeHTTPGraphQLRequest, FormidableFile } from '@react-libraries/next-apollo-server';
+import type { IResolvers } from '@graphql-tools/utils';
+import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
 
 /**
- * GraphQLのType設定
+ * Type settings for GraphQL
  */
-const typeDefs = gql`
+const typeDefs = `
   # Return date
   scalar Date
   type Query {
@@ -28,12 +27,12 @@ const typeDefs = gql`
 `;
 
 /**
- * Set Context type.
+ * Set Context type
  */
 type Context = { req: NextApiRequest; res: NextApiResponse };
 
 /**
- * GraphQLのResolver
+ * Resolver for GraphQL
  */
 const resolvers: IResolvers<Context> = {
   Query: {
@@ -63,7 +62,7 @@ apolloServer.start();
 /**
  * APIRoute handler for Next.js
  */
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+const handler: NextApiHandler = async (req, res) => {
   //Convert NextApiRequest to body format for GraphQL (multipart/form-data support).
   return executeHTTPGraphQLRequest({
     req,
