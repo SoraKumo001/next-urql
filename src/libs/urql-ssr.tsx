@@ -1,16 +1,21 @@
-import { cacheExchange } from '@urql/exchange-graphcache';
 import { ReactNode } from 'react';
-import { composeExchanges, Exchange, ssrExchange, useClient } from 'urql';
-import { pipe, tap } from 'wonka';
-import type { SSRData } from '@urql/core/dist/types/exchanges/ssr';
+import {
+  composeExchanges,
+  Exchange,
+  makeResult,
+  OperationResult,
+  ssrExchange,
+  useClient,
+} from 'urql';
+
+import { pipe, tap, filter, map, merge, mergeMap, fromPromise } from 'wonka';
 
 type Promises = Set<Promise<void>>;
-type ExchangeValue = { extractData: () => SSRData; promises: Promises };
 const DATA_NAME = '__NEXT_DATA_PROMISE__';
 const isServerSide = typeof window === 'undefined';
 
 /**
- * Collecting data from HTML.
+ * Collecting data from HTML
  */
 export const getInitialState = () => {
   if (typeof window !== 'undefined') {
@@ -21,30 +26,24 @@ export const getInitialState = () => {
 };
 
 /**
- * Wait until end of Query and output collected data at render time.
+ * Wait until end of Query and output collected data at render time
  */
 const DataRender = () => {
   const client = useClient();
-  const { data } = client.readQuery(`query{exchangeValue}`, {})!;
-  const ssrExchange: ExchangeValue = data.exchangeValue;
-
-  const promises = ssrExchange.promises;
-  const length = promises?.size;
-  if (isServerSide && length) {
-    throw Promise.allSettled(promises).then((v) => {
-      if (length === promises.size) {
-        promises.clear();
-      }
-      return v;
-    });
+  if (isServerSide) {
+    const extractData = client.readQuery(`query{extractData}`, {})?.data.extractData;
+    if (!extractData) {
+      throw client.query(`query{extractData}`, {}).toPromise();
+    }
+    return (
+      <script
+        id={DATA_NAME}
+        type="application/json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(extractData) }}
+      />
+    );
   }
-  return (
-    <script
-      id={DATA_NAME}
-      type="application/json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(ssrExchange.extractData()) }}
-    />
-  );
+  return null;
 };
 
 /**
@@ -59,55 +58,95 @@ export const NextSSRProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+const createLocalValueExchange = <T extends object>(key: string, callback: () => Promise<T>) => {
+  const localValueExchange: Exchange = (input) => {
+    const { forward } = input;
+    return (operation) => {
+      const filterOps$ = pipe(
+        operation,
+        filter((op) => {
+          const definition = op.query.definitions[0];
+          if (definition?.kind === 'OperationDefinition') {
+            const selection = definition.selectionSet.selections[0];
+            if (selection?.kind === 'Field') {
+              if (selection.name.value === key) return false;
+            }
+          }
+          return true;
+        }),
+        forward
+      );
+      const valueOps$ = pipe(
+        operation,
+        mergeMap((op) => {
+          const source = fromPromise(
+            new Promise<OperationResult>(async (resolve) => {
+              resolve(makeResult(op, { data: { [key]: await callback() } }));
+            })
+          );
+          return source;
+        })
+      );
+      return merge([filterOps$, valueOps$]);
+    };
+  };
+  return localValueExchange;
+};
+
 /**
  * Query standby extensions
  */
 export const createNextSSRExchange = () => {
   const promises: Promises = new Set();
-  const nextExchange: Exchange = (input) => {
-    const { forward } = input;
-    return (ops) => {
-      if (!isServerSide) {
-        return forward(ops);
-      }
-      let resolve: () => void;
-      return pipe(
-        ops,
-        tap((op) => {
-          if (op.kind === 'query') {
-            const promise = new Promise<void>((r) => {
-              resolve = r;
-            });
-            promises.add(promise);
-          }
-          return op;
-        }),
-        forward,
-        tap((result) => {
-          if (result.operation.kind === 'query') {
-            resolve();
-          }
-          return result;
-        })
-      );
-    };
-  };
 
   const _ssrExchange = ssrExchange({
     isClient: !isServerSide,
-    // SSRに必要な初期データの設定
+    // Set up initial data required for SSR
     initialState: getInitialState(),
   });
-  const exchangeValue = { extractData: () => _ssrExchange.extractData(), promises };
-  return composeExchanges([
-    cacheExchange({
-      resolvers: {
-        Query: {
-          exchangeValue: () => exchangeValue,
-        },
-      },
-    }),
-    _ssrExchange,
-    nextExchange,
-  ]);
+  const _nextExchange: Exchange = (input) => {
+    const { forward } = input;
+
+    return (operation) => {
+      if (!isServerSide) {
+        return forward(operation);
+      } else {
+        return pipe(
+          operation,
+          tap((op) => {
+            if (op.kind === 'query') {
+              const promise = new Promise<void>((resolve) => {
+                op.context.resolve = resolve;
+              });
+              promises.add(promise);
+            }
+          }),
+          forward,
+          tap((op) => {
+            if (op.operation.kind === 'query') {
+              op.operation.context.resolve();
+            }
+          })
+        );
+      }
+    };
+  };
+  return composeExchanges(
+    [
+      _ssrExchange,
+      isServerSide &&
+        createLocalValueExchange('extractData', async () => {
+          let length: number;
+          while ((length = promises?.size)) {
+            await Promise.allSettled(promises).then(() => {
+              if (length === promises.size) {
+                promises.clear();
+              }
+            });
+          }
+          return _ssrExchange.extractData();
+        }),
+      _nextExchange,
+    ].filter((v): v is Exchange => v !== false)
+  );
 };

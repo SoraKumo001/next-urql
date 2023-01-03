@@ -1,5 +1,5 @@
 import { multipartFetchExchange } from '@urql/exchange-multipart-fetch';
-import { Client, Provider } from 'urql';
+import { cacheExchange, Client, Provider } from 'urql';
 import { createNextSSRExchange, NextSSRProvider } from '../libs/urql-ssr';
 import type { AppType } from 'next/app';
 
@@ -24,7 +24,7 @@ const App: AppType = ({ Component, pageProps }) => {
     },
     // Only on the Server side do 'throw promise'.
     suspense: isServerSide,
-    exchanges: [nextSSRExchange, multipartFetchExchange],
+    exchanges: [cacheExchange, nextSSRExchange, multipartFetchExchange],
   });
   return (
     <Provider value={client}>
