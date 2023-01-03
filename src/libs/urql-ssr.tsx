@@ -8,7 +8,7 @@ import {
   useClient,
 } from 'urql';
 
-import { pipe, tap, filter, map, merge, mergeMap, fromPromise } from 'wonka';
+import { pipe, tap, filter, merge, mergeMap, fromPromise } from 'wonka';
 
 type Promises = Set<Promise<void>>;
 const DATA_NAME = '__NEXT_DATA_PROMISE__';
@@ -58,6 +58,9 @@ export const NextSSRProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+/**
+ * local query function
+ */
 const createLocalValueExchange = <T extends object>(key: string, callback: () => Promise<T>) => {
   const localValueExchange: Exchange = (input) => {
     const { forward } = input;
@@ -106,7 +109,6 @@ export const createNextSSRExchange = () => {
   });
   const _nextExchange: Exchange = (input) => {
     const { forward } = input;
-
     return (operation) => {
       if (!isServerSide) {
         return forward(operation);

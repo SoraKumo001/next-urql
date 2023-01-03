@@ -1,4 +1,4 @@
-import { gql, useClient, useMutation, useQuery } from 'urql';
+import { gql, useMutation, useQuery } from 'urql';
 
 // Date retrieval
 const QUERY = gql`

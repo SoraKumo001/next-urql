@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@apollo/server": "^4.3.0",
-    "@react-libraries/next-apollo-server": "^0.0.1",
+    "@react-libraries/next-apollo-server": "^0.0.3",
     "@urql/exchange-graphcache": "^5.0.8",
     "@urql/exchange-multipart-fetch": "^1.0.1",
     "graphql": "^16.6.0",
@@ -23,10 +23,10 @@
   "devDependencies": {
     "@types/node": "^18.11.18",
     "@types/react": "18.0.26",
-    "@typescript-eslint/eslint-plugin": "^5.47.1",
+    "@typescript-eslint/eslint-plugin": "^5.48.0",
     "eslint": "8.31.0",
     "eslint-config-next": "13.1.1",
-    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-import": "^2.26.0",
     "prettier": "^2.8.1",
     "typescript": "4.9.4"
