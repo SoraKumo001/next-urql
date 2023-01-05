@@ -24,7 +24,7 @@ const Page = () => {
 
   return (
     <>
-      <a target="_blank" href="https://github.com/SoraKumo001/next-apollo-server" rel="noreferrer">
+      <a target="_blank" href="https://github.com/SoraKumo001/next-urql" rel="noreferrer">
         Source code
       </a>
       <hr />
