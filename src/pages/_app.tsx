@@ -1,7 +1,7 @@
+import { createNextSSRExchange, NextSSRProvider } from '@react-libraries/next-exchange-ssr';
 import { multipartFetchExchange } from '@urql/exchange-multipart-fetch';
 import { useMemo, useState } from 'react';
 import { cacheExchange, Client, Provider } from 'urql';
-import { createNextSSRExchange, NextSSRProvider } from '../libs/urql-ssr';
 import type { AppType } from 'next/app';
 
 const isServerSide = typeof window === 'undefined';
@@ -13,22 +13,25 @@ const url = isServerSide
   : endpoint;
 
 const App: AppType = ({ Component, pageProps }) => {
-  // Creation of `Exchange`.
+  // NextSSRExchange to be unique on AppTree
   const [nextSSRExchange] = useState(createNextSSRExchange);
+
   const client = useMemo(() => {
     return new Client({
       url,
       fetchOptions: {
         headers: {
-          // Required for `Upload`.
+          //// Required for `Upload`.
           'apollo-require-preflight': 'true',
+          //// When authenticating, the useMemo callback is re-executed and the cache is destroyed.
+          //'authorization': `Bearer ${token}`
         },
       },
       // Only on the Server side do 'throw promise'.
       suspense: isServerSide,
       exchanges: [cacheExchange, nextSSRExchange, multipartFetchExchange],
     });
-  }, [nextSSRExchange]);
+  }, [nextSSRExchange /*,token*/]);
 
   return (
     <Provider value={client}>
