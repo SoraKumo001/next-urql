@@ -399,10 +399,10 @@
     "@types/formidable" "^2.0.5"
     formidable "^2.1.1"
 
-"@react-libraries/next-exchange-ssr@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@react-libraries/next-exchange-ssr/-/next-exchange-ssr-0.0.2.tgz#b8262335df8cb549a3e979dcdef5f8ceeb1649e9"
-  integrity sha512-b+pMPCqbkSYtwiV55KTRgAU/z1YMNRuhL4C5Kr4XN2gy5UweFbMivr9uUV8ukwyl44tGWIT7iw6+CU1UEuaQzw==
+"@react-libraries/next-exchange-ssr@^0.0.5":
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/@react-libraries/next-exchange-ssr/-/next-exchange-ssr-0.0.5.tgz#2ac6d1217578fb2600b38d0c18a76641f6bc9bd4"
+  integrity sha512-yia6xzwcUMy/LCRSjYtA5UmwDycGyYKex3z0rAM+b8W86SAN12JIPLDZrn2tuDlUYQ/t14vKNmDjBYiKpqluCA==
 
 "@rushstack/eslint-patch@^1.1.3":
   version "1.2.0"
