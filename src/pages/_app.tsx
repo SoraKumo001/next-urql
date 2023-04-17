@@ -1,7 +1,6 @@
 import { createNextSSRExchange, NextSSRProvider } from '@react-libraries/next-exchange-ssr';
-import { multipartFetchExchange } from '@urql/exchange-multipart-fetch';
 import { useMemo, useState } from 'react';
-import { cacheExchange, Client, Provider } from 'urql';
+import { cacheExchange, Client, Provider, fetchExchange } from 'urql';
 import type { AppType } from 'next/app';
 
 const isServerSide = typeof window === 'undefined';
@@ -29,7 +28,7 @@ const App: AppType = ({ Component, pageProps }) => {
       },
       // Only on the Server side do 'throw promise'.
       suspense: isServerSide,
-      exchanges: [cacheExchange, nextSSRExchange, multipartFetchExchange],
+      exchanges: [cacheExchange, nextSSRExchange, fetchExchange],
     });
   }, [nextSSRExchange /*,token*/]);
 

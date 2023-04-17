@@ -63,7 +63,7 @@ apolloServer.start();
  */
 const handler: NextApiHandler = async (req, res) => {
   //Convert NextApiRequest to body format for GraphQL (multipart/form-data support).
-  return executeHTTPGraphQLRequest({
+  await executeHTTPGraphQLRequest({
     req,
     res,
     apolloServer,
